@@ -17,7 +17,7 @@ pub fn parse(expression: &str) -> Result<Cron, CronError> {
     let month = parse_field(parts[3], 1, 12, "month")?;
     let day_of_week = parse_field(parts[4], 0, 6, "day of week")?;
 
-    return Ok(Cron::new(minute, hour, day_of_month, month, day_of_week));
+    Ok(Cron::new(minute, hour, day_of_month, month, day_of_week))
 }
 
 fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, CronError> {
@@ -43,7 +43,7 @@ fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Fiel
     }
 
     let value = parse_literal(input, min, max, field_name)?;
-    return Ok(Field::Exact(value));
+    Ok(Field::Exact(value))
 }
 
 fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, CronError> {
@@ -72,7 +72,7 @@ fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field
 
     let base = parse_step_base(base_part, min, max, field_name)?;
 
-    return Ok(Field::Step {
+    Ok(Field::Step {
         base: Box::new(base),
         step,
     })
@@ -110,7 +110,7 @@ fn parse_range(input: &str, min: u32, max: u32, field_name: &str) -> Result<Fiel
         )));
     }
 
-    return Ok(Field::Range { start, end });
+    Ok(Field::Range { start, end })
 }
 
 fn parse_literal(input: &str, min: u32, max: u32, field_name: &str) -> Result<u32, CronError> {
@@ -124,7 +124,7 @@ fn parse_literal(input: &str, min: u32, max: u32, field_name: &str) -> Result<u3
         )));
     }
 
-    return Ok(value);
+    Ok(value)
 }
 
 #[cfg(test)]
