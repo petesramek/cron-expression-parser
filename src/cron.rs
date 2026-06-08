@@ -8,3 +8,21 @@ pub struct Cron {
     month: Field,
     day_of_week: Field,
 }
+
+impl Cron {
+    pub(crate) fn new(
+        minute: Field,
+        hour: Field,
+        day_of_month: Field,
+        month: Field,
+        day_of_week: Field,
+    ) -> Self {
+        Self {
+            minute,
+            hour,
+            day_of_month,
+            month,
+            day_of_week,
+        }
+    }
+}
