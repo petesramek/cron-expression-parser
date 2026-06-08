@@ -25,6 +25,10 @@ fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Fiel
         return Ok(Field::Any);
     }
 
+    if input.contains('/') {
+        return parse_step(input, min, max, field_name);
+    }
+
     if input.contains(',') {
         let values = input
             .split(',')
@@ -40,6 +44,52 @@ fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Fiel
 
     let value = parse_literal(input, min, max, field_name)?;
     return Ok(Field::Exact(value));
+}
+
+fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, CronError> {
+    let parts: Vec<&str> = input.split('/').collect();
+
+    if parts.len() != 2 {
+        return Err(CronError::InvalidExpression(format!(
+            "Invalid {field_name} step: {input}"
+        )));
+    }
+
+    let base_part = parts[0];
+    let step_part = parts[1];
+
+    let step = step_part
+        .parse::<u32>()
+        .map_err(|_| CronError::InvalidExpression(format!(
+            "Invalid {field_name} step value: {step_part}"
+        )))?;
+
+    if step == 0 {
+        return Err(CronError::InvalidExpression(format!(
+            "{field_name} step must be greater than 0: {input}"
+        )));
+    }
+
+    let base = parse_step_base(base_part, min, max, field_name)?;
+
+    Ok(Field::Step {
+        base: Box::new(base),
+        step,
+    })
+}
+
+fn parse_step_base(base: &str, min: u32, max: u32, field_name: &str) -> Result<Field, CronError> {
+    if base == "*" {
+        return Ok(Field::Any);
+    }
+
+    if base.contains('-') {
+        return parse_range(base, min, max, field_name);
+    }
+
+    Err(CronError::InvalidExpression(format!(
+        "Invalid {field_name} step base: {base}"
+    )))
 }
 
 fn parse_range(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, CronError> {
@@ -105,6 +155,32 @@ mod tests {
         assert_eq!(result.unwrap(), Field::Range { start: 1, end: 5 });
     }
 
+
+    #[test]
+    fn parses_wildcard_step_field() {
+        let result = parse_field("*/15", 0, 59, "minute");
+        assert_eq!(
+            result.unwrap(),
+            Field::Step {
+                base: Box::new(Field::Any),
+                step: 15,
+            }
+        );
+    }
+
+    #[test]
+    fn parses_range_step_field() {
+        let result = parse_field("1-30/5", 0, 59, "minute");
+        assert_eq!(
+            result.unwrap(),
+            Field::Step {
+                base: Box::new(Field::Range { start: 1, end: 30 }),
+                step: 5,
+            }
+        );
+    }
+
+
     #[test]
     fn parses_exact_cron() {
         let result = parse("1 1 1 1 1");
@@ -157,6 +233,24 @@ mod tests {
             result.unwrap(),
             Cron::new(
                 Field::Range { start: 1, end: 5 },
+                Field::Any,
+                Field::Any,
+                Field::Any,
+                Field::Any
+            )
+        );
+    }
+
+    #[test]
+    fn parses_step_cron() {
+        let result = parse("*/15 * * * *");
+        assert_eq!(
+            result.unwrap(),
+            Cron::new(
+                Field::Step {
+                    base: Box::new(Field::Any),
+                    step: 15,
+                },
                 Field::Any,
                 Field::Any,
                 Field::Any,
@@ -264,6 +358,37 @@ mod tests {
     #[test]
     fn rejects_malformed_range() {
         let result = parse_field("1-5-9", 0, 59, "minute");
+        assert!(result.is_err());
+    }
+
+
+    #[test]
+    fn rejects_zero_step() {
+        let result = parse_field("*/0", 0, 59, "minute");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_step_value() {
+        let result = parse_field("*/abc", 0, 59, "minute");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_step_base() {
+        let result = parse_field("5/10", 0, 59, "minute");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_range_step_base() {
+        let result = parse_field("70-80/5", 0, 59, "minute");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_malformed_step() {
+        let result = parse_field("*/15/2", 0, 59, "minute");
         assert!(result.is_err());
     }
 }
