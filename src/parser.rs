@@ -11,16 +11,16 @@ pub fn parse(expression: &str) -> Result<Cron, CronError> {
         )));
     }
 
-    let minute = parse_field(parts[0])?;
-    let hour = parse_field(parts[1])?;
-    let day_of_month = parse_field(parts[2])?;
-    let month = parse_field(parts[3])?;
-    let day_of_week = parse_field(parts[4])?;
+    let minute = parse_field(parts[0], 0, 59, "minute")?;
+    let hour = parse_field(parts[1], 0, 23, "hour")?;
+    let day_of_month = parse_field(parts[2], 1, 31, "day of month")?;
+    let month = parse_field(parts[3], 1, 12, "month")?;
+    let day_of_week = parse_field(parts[4], 0, 6, "day of week")?;
 
     return Ok(Cron::new(minute, hour, day_of_month, month, day_of_week));
 }
 
-fn parse_field(input: &str) -> Result<Field, CronError> {
+fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, CronError> {
     if input == "*" {
         return Ok(Field::Any)
     }
@@ -29,6 +29,14 @@ fn parse_field(input: &str) -> Result<Field, CronError> {
         .parse::<u32>()
         .map_err(|_| CronError::InvalidExpression(format!("Invalid field value: {input}")))?;
 
+
+    if value < min || value > max {
+        return Err(CronError::InvalidExpression(format!(
+            "{field_name} value out of range: {value} (expected {min}-{max})"
+        )));
+    }
+
+
     return Ok(Field::Exact(value))
 }
 
@@ -36,15 +44,16 @@ fn parse_field(input: &str) -> Result<Field, CronError> {
 mod tests {
     use super::*;
 
+
     #[test]
     fn parses_any_field() {
-        let result = parse_field("*");
+        let result = parse_field("*", 0, 59, "minute");
         assert_eq!(result.unwrap(), Field::Any);
     }
 
     #[test]
     fn parses_exact_field() {
-        let result = parse_field("5");
+        let result = parse_field("5", 0, 59, "minute");
         assert_eq!(result.unwrap(), Field::Exact(5));
     }
 
@@ -67,16 +76,21 @@ mod tests {
         assert!(cron.is_ok());
     }
 
-
     #[test]
     fn rejects_empty_field_literal() {
-        let result = parse_field("");
+        let result = parse_field("", 0, 59, "minute");
         assert!(result.is_err());
     }
 
     #[test]
     fn rejects_invalid_field_literal() {
-        let result = parse_field("abc");
+        let result = parse_field("abc", 0, 59, "minute");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_out_of_range_field() {
+        let result = parse_field("70", 0, 59, "minute");
         assert!(result.is_err());
     }
 
@@ -91,4 +105,36 @@ mod tests {
         let result = parse("* * * *");
         assert!(result.is_err());
     }
+
+
+    #[test]
+    fn rejects_invalid_minute() {
+        let result = parse("70 * * * *");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_hour() {
+        let result = parse("* 24 * * *");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_day() {
+        let result = parse("* * 32 * *");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_month() {
+        let result = parse("* * * 13 *");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_day_of_week() {
+        let result = parse("* * * * 7");
+        assert!(result.is_err());
+    }
+
 }
