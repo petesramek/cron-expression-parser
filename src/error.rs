@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum CronError {
+pub enum Error {
     InvalidExpression(String),
     NoOccurrenceFound,
     InvalidTimestamp(i64),

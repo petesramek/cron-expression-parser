@@ -48,13 +48,7 @@ mod tests {
 
     #[test]
     fn matches_all_wildcards() {
-        let cron = Cron::new(
-            Field::Any,
-            Field::Any,
-            Field::Any,
-            Field::Any,
-            Field::Any,
-        );
+        let cron = Cron::new(Field::Any, Field::Any, Field::Any, Field::Any, Field::Any);
 
         assert!(cron.matches(0, 0, 1, 1, 0));
         assert!(cron.matches(59, 23, 31, 12, 6));
@@ -92,10 +86,10 @@ mod tests {
         assert!(cron.matches(30, 9, 10, 6, 1));
         assert!(cron.matches(45, 17, 10, 12, 1));
 
-        assert!(!cron.matches(31, 9, 10, 6, 1));  // minute not on step
+        assert!(!cron.matches(31, 9, 10, 6, 1)); // minute not on step
         assert!(!cron.matches(30, 18, 10, 6, 1)); // hour out of range
-        assert!(!cron.matches(30, 9, 10, 7, 1));  // month not in list
-        assert!(!cron.matches(30, 9, 10, 6, 2));  // day of week mismatch
+        assert!(!cron.matches(30, 9, 10, 7, 1)); // month not in list
+        assert!(!cron.matches(30, 9, 10, 6, 2)); // day of week mismatch
     }
 
     #[test]

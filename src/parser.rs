@@ -1,11 +1,11 @@
 use crate::field::Field;
-use crate::{Cron, CronError};
+use crate::{Cron, Error};
 
-pub fn parse(expression: &str) -> Result<Cron, CronError> {
+pub fn parse(expression: &str) -> Result<Cron, Error> {
     let parts: Vec<&str> = expression.split_whitespace().collect();
 
     if parts.len() != 5 {
-        return Err(CronError::InvalidExpression(format!(
+        return Err(Error::InvalidExpression(format!(
             "Expected 5 fields, got {}",
             parts.len()
         )));
@@ -20,7 +20,7 @@ pub fn parse(expression: &str) -> Result<Cron, CronError> {
     Ok(Cron::new(minute, hour, day_of_month, month, day_of_week))
 }
 
-fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, CronError> {
+fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, Error> {
     if input == "*" {
         return Ok(Field::Any);
     }
@@ -33,7 +33,7 @@ fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Fiel
         let values = input
             .split(',')
             .map(|part| parse_literal(part, min, max, field_name))
-            .collect::<Result<Vec<u32>, CronError>>()?;
+            .collect::<Result<Vec<u32>, Error>>()?;
 
         return Ok(Field::List(values));
     }
@@ -46,11 +46,11 @@ fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Fiel
     Ok(Field::Exact(value))
 }
 
-fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, CronError> {
+fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, Error> {
     let parts: Vec<&str> = input.split('/').collect();
 
     if parts.len() != 2 {
-        return Err(CronError::InvalidExpression(format!(
+        return Err(Error::InvalidExpression(format!(
             "Invalid {field_name} step: {input}"
         )));
     }
@@ -58,14 +58,12 @@ fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field
     let base_part = parts[0];
     let step_part = parts[1];
 
-    let step = step_part
-        .parse::<u32>()
-        .map_err(|_| CronError::InvalidExpression(format!(
-            "Invalid {field_name} step value: {step_part}"
-        )))?;
+    let step = step_part.parse::<u32>().map_err(|_| {
+        Error::InvalidExpression(format!("Invalid {field_name} step value: {step_part}"))
+    })?;
 
     if step == 0 {
-        return Err(CronError::InvalidExpression(format!(
+        return Err(Error::InvalidExpression(format!(
             "{field_name} step must be greater than 0: {input}"
         )));
     }
@@ -78,7 +76,7 @@ fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field
     })
 }
 
-fn parse_step_base(base: &str, min: u32, max: u32, field_name: &str) -> Result<Field, CronError> {
+fn parse_step_base(base: &str, min: u32, max: u32, field_name: &str) -> Result<Field, Error> {
     if base == "*" {
         return Ok(Field::Any);
     }
@@ -87,16 +85,16 @@ fn parse_step_base(base: &str, min: u32, max: u32, field_name: &str) -> Result<F
         return parse_range(base, min, max, field_name);
     }
 
-    Err(CronError::InvalidExpression(format!(
+    Err(Error::InvalidExpression(format!(
         "Invalid {field_name} step base: {base}"
     )))
 }
 
-fn parse_range(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, CronError> {
+fn parse_range(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, Error> {
     let parts: Vec<&str> = input.split('-').collect();
 
     if parts.len() != 2 {
-        return Err(CronError::InvalidExpression(format!(
+        return Err(Error::InvalidExpression(format!(
             "Invalid {field_name} range: {input}"
         )));
     }
@@ -105,7 +103,7 @@ fn parse_range(input: &str, min: u32, max: u32, field_name: &str) -> Result<Fiel
     let end = parse_literal(parts[1], min, max, field_name)?;
 
     if start >= end {
-        return Err(CronError::InvalidExpression(format!(
+        return Err(Error::InvalidExpression(format!(
             "Invalid {field_name} range: start {start} is equal or greater than end {end}"
         )));
     }
@@ -113,13 +111,13 @@ fn parse_range(input: &str, min: u32, max: u32, field_name: &str) -> Result<Fiel
     Ok(Field::Range { start, end })
 }
 
-fn parse_literal(input: &str, min: u32, max: u32, field_name: &str) -> Result<u32, CronError> {
+fn parse_literal(input: &str, min: u32, max: u32, field_name: &str) -> Result<u32, Error> {
     let value = input
         .parse::<u32>()
-        .map_err(|_| CronError::InvalidExpression(format!("Invalid {field_name}: {input}")))?;
+        .map_err(|_| Error::InvalidExpression(format!("Invalid {field_name}: {input}")))?;
 
     if value < min || value > max {
-        return Err(CronError::InvalidExpression(format!(
+        return Err(Error::InvalidExpression(format!(
             "{field_name} value out of range: {value} (expected {min}-{max})"
         )));
     }
@@ -155,7 +153,6 @@ mod tests {
         assert_eq!(result.unwrap(), Field::Range { start: 1, end: 5 });
     }
 
-
     #[test]
     fn parses_wildcard_step_field() {
         let result = parse_field("*/15", 0, 59, "minute");
@@ -179,7 +176,6 @@ mod tests {
             }
         );
     }
-
 
     #[test]
     fn parses_exact_cron() {
@@ -360,7 +356,6 @@ mod tests {
         let result = parse_field("1-5-9", 0, 59, "minute");
         assert!(result.is_err());
     }
-
 
     #[test]
     fn rejects_zero_step() {
