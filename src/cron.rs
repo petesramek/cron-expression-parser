@@ -45,7 +45,6 @@ impl Cron {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::field::Field;
 
     #[test]
     fn matches_all_wildcards() {
