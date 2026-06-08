@@ -1,6 +1,8 @@
 use crate::{Cron, Error};
 use chrono::{DateTime, Datelike, Duration, Timelike, Utc};
 
+/// Finds the next UTC Unix timestamp after `reference_timestamp` that matches
+/// the provided parsed cron expression.
 pub fn next_occurrence(parsed: &Cron, reference_timestamp: i64) -> Result<i64, Error> {
     let mut current = DateTime::<Utc>::from_timestamp(reference_timestamp, 0)
         .ok_or(Error::InvalidTimestamp(reference_timestamp))?;

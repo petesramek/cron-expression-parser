@@ -1,5 +1,6 @@
 use crate::field::Field;
 
+/// A parsed and validated 5-field cron expression.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Cron {
     minute: Field,
@@ -10,6 +11,10 @@ pub struct Cron {
 }
 
 impl Cron {
+    /// Creates a new internal cron representation from parsed fields.
+    ///
+    /// This constructor is restricted to the current crate so that external consumers
+    /// cannot bypass parsing and create invalid `Cron` values directly.
     pub(crate) fn new(
         minute: Field,
         hour: Field,
@@ -26,6 +31,15 @@ impl Cron {
         }
     }
 
+    /// Returns `true` if the provided UTC date/time components match this cron expression.
+    ///
+    /// The arguments correspond to the five standard cron fields:
+    ///
+    /// - `minute`: `0..=59`
+    /// - `hour`: `0..=23`
+    /// - `day_of_month`: `1..=31`
+    /// - `month`: `1..=12`
+    /// - `day_of_week`: `0..=6` (`0 = Sunday`)
     pub(crate) fn matches(
         &self,
         minute: u32,

@@ -1,13 +1,31 @@
+/// Internal representation of a single parsed cron field.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Field {
+    /// Matches every possible value in the field range.
     Any,
+    /// Matches exactly one value.
     Exact(u32),
+    /// Matches any of the listed exact values.
     List(Vec<u32>),
+    /// Matches any value in the inclusive range from `start` to `end`.
     Range { start: u32, end: u32 },
+    /// Matches values from the nested base field at the specified step interval.
+    ///
+    /// In the current implementation, supported step bases are limited to:
+    ///
+    /// - `Field::Any`
+    /// - `Field::Range { .. }
     Step { base: Box<Field>, step: u32 },
 }
 
 impl Field {
+    /// Returns `true` if the given value matches this field.
+    ///
+    /// The `field_min` argument is used as the anchor for wildcard-based step expressions.
+    /// For example:
+    ///
+    /// - minute / hour fields use `0`
+    /// - day-of-month / month fields use `1`
     pub(crate) fn matches(&self, value: u32, field_min: u32) -> bool {
         match self {
             Field::Any => true,
@@ -20,7 +38,7 @@ impl Field {
                     value >= *start && value <= *end && (value - *start).is_multiple_of(*step)
                 }
 
-                // Should be also applied to list, but is not in the specs defined.
+                // Unsupported by the current parser: step bases are limited to "*" or a range.
                 _ => false,
             },
         }

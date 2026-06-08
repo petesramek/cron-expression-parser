@@ -1,6 +1,7 @@
 use crate::field::Field;
 use crate::{Cron, Error};
 
+/// Parses a standard 5-field cron expression into a validated structured representation.
 pub fn parse(expression: &str) -> Result<Cron, Error> {
     let parts: Vec<&str> = expression.split_whitespace().collect();
 
@@ -20,6 +21,7 @@ pub fn parse(expression: &str) -> Result<Cron, Error> {
     Ok(Cron::new(minute, hour, day_of_month, month, day_of_week))
 }
 
+/// Parses a single cron field according to the supported syntax for this implementation.
 fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, Error> {
     if input == "*" {
         return Ok(Field::Any);
@@ -46,6 +48,7 @@ fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Fiel
     Ok(Field::Exact(value))
 }
 
+/// Parses a step expression such as `*/15` or `1-30/5`.
 fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, Error> {
     let parts: Vec<&str> = input.split('/').collect();
 
@@ -76,6 +79,12 @@ fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field
     })
 }
 
+/// Parses the base expression for a step field.
+///
+/// In the current implementation, the supported step bases are:
+///
+/// - `*`
+/// - a range such as `1-30`
 fn parse_step_base(base: &str, min: u32, max: u32, field_name: &str) -> Result<Field, Error> {
     if base == "*" {
         return Ok(Field::Any);
@@ -90,6 +99,9 @@ fn parse_step_base(base: &str, min: u32, max: u32, field_name: &str) -> Result<F
     )))
 }
 
+/// Parses a range expression such as `1-5`.
+///
+/// In the current implementation, the start value must be strictly less than the end value.
 fn parse_range(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, Error> {
     let parts: Vec<&str> = input.split('-').collect();
 
@@ -111,6 +123,7 @@ fn parse_range(input: &str, min: u32, max: u32, field_name: &str) -> Result<Fiel
     Ok(Field::Range { start, end })
 }
 
+/// Parses a single numeric literal and validates it against the allowed field range.
 fn parse_literal(input: &str, min: u32, max: u32, field_name: &str) -> Result<u32, Error> {
     let value = input
         .parse::<u32>()
