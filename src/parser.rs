@@ -72,7 +72,7 @@ fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field
 
     let base = parse_step_base(base_part, min, max, field_name)?;
 
-    Ok(Field::Step {
+    return Ok(Field::Step {
         base: Box::new(base),
         step,
     })
