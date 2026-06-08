@@ -15,9 +15,9 @@ impl Field {
             Field::Range { start, end } => start <= &value && &value <= end,
             Field::List(values) => values.contains(&value),
             Field::Step { base, step } => match base.as_ref() {
-                Field::Any => value >= field_min && (value - field_min) % *step == 0,
+                Field::Any => value >= field_min && (value - field_min).is_multiple_of(*step),
                 Field::Range { start, end } => {
-                    value >= *start && value <= *end && (value - *start) % *step == 0
+                    value >= *start && value <= *end && (value - *start).is_multiple_of(*step)
                 }
 
                 // Should be also applied to list, but is not in the specs defined.
