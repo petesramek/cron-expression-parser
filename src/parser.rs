@@ -99,9 +99,11 @@ fn parse_step_base(base: &str, min: u32, max: u32, field_name: &str) -> Result<F
     )))
 }
 
+
 /// Parses a range expression such as `1-5`.
 ///
-/// In the current implementation, the start value must be strictly less than the end value.
+/// Ranges are inclusive and may use the same start and end value,
+/// so expressions such as `5-5` are treated as valid ranges
 fn parse_range(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, Error> {
     let parts: Vec<&str> = input.split('-').collect();
 
@@ -114,9 +116,9 @@ fn parse_range(input: &str, min: u32, max: u32, field_name: &str) -> Result<Fiel
     let start = parse_literal(parts[0], min, max, field_name)?;
     let end = parse_literal(parts[1], min, max, field_name)?;
 
-    if start >= end {
+    if start > end {
         return Err(Error::InvalidExpression(format!(
-            "Invalid {field_name} range: start {start} is equal or greater than end {end}"
+            "Invalid {field_name} range: start {start} is greater than end {end}"
         )));
     }
 
@@ -161,10 +163,17 @@ mod tests {
     }
 
     #[test]
-    fn parses_range_field() {
+    fn parses_valid_range_field() {
         let result = parse_field("1-5", 0, 59, "minute");
         assert_eq!(result.unwrap(), Field::Range { start: 1, end: 5 });
     }
+
+    #[test]
+    fn parses_equal_range_field() {
+        let result = parse_field("5-5", 0, 59, "minute");
+        assert_eq!(result.unwrap(), Field::Range { start: 5, end: 5 });
+    }
+
 
     #[test]
     fn parses_wildcard_step_field() {
@@ -237,13 +246,13 @@ mod tests {
 
     #[test]
     fn parses_range_cron() {
-        let result = parse("1-5 * * * *");
+        let result = parse("1-5 * 5-5 * *");
         assert_eq!(
             result.unwrap(),
             Cron::new(
                 Field::Range { start: 1, end: 5 },
                 Field::Any,
-                Field::Any,
+                Field::Range { start: 5, end: 5 },
                 Field::Any,
                 Field::Any
             )
