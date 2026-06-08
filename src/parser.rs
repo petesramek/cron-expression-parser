@@ -25,10 +25,23 @@ fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Fiel
         return Ok(Field::Any)
     }
 
+    if input.contains(',') {
+        let values = input
+            .split(',')
+            .map(|part| parse_literal(part, min, max, field_name))
+            .collect::<Result<Vec<u32>, CronError>>()?;
+
+        return Ok(Field::List(values));
+    }
+
+    let value = parse_literal(input, min, max, field_name)?;
+    return Ok(Field::Exact(value))
+}
+
+fn parse_literal(input: &str, min: u32, max: u32, field_name: &str) -> Result<u32, CronError> {
     let value = input
         .parse::<u32>()
-        .map_err(|_| CronError::InvalidExpression(format!("Invalid field value: {input}")))?;
-
+        .map_err(|_| CronError::InvalidExpression(format!("Invalid {field_name}: {input}")))?;
 
     if value < min || value > max {
         return Err(CronError::InvalidExpression(format!(
@@ -36,11 +49,10 @@ fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Fiel
         )));
     }
 
-
-    return Ok(Field::Exact(value))
+    return Ok(value)
 }
 
-#[cfg(test)]
+    #[cfg(test)]
 mod tests {
     use super::*;
 
@@ -57,6 +69,13 @@ mod tests {
         assert_eq!(result.unwrap(), Field::Exact(5));
     }
 
+
+    #[test]
+    fn parses_list_field() {
+        let result = parse_field("1,15,30", 0, 59, "minute");
+        assert_eq!(result.unwrap(), Field::List(vec![1, 15, 30]));
+    }
+
     #[test]
     fn parses_exact_cron() {
         let result = parse("1 1 1 1 1");
@@ -69,11 +88,25 @@ mod tests {
         assert_eq!(result.unwrap(), Cron::new(Field::Any,Field::Any,Field::Any,Field::Any,Field::Any));
     }
 
-
     #[test]
     fn parses_mixed_exact_and_wildcard_cron() {
         let cron = parse("0 12 * * 1");
         assert!(cron.is_ok());
+    }
+
+    #[test]
+    fn parses_list_cron() {
+        let result = parse("1,15,30 * * * *");
+        assert_eq!(
+            result.unwrap(),
+            Cron::new(
+                Field::List(vec![1, 15, 30]),
+                Field::Any,
+                Field::Any,
+                Field::Any,
+                Field::Any
+            )
+        );
     }
 
     #[test]
@@ -91,6 +124,12 @@ mod tests {
     #[test]
     fn rejects_out_of_range_field() {
         let result = parse_field("70", 0, 59, "minute");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_value_in_list() {
+        let result = parse_field("1,abc,30", 0, 59, "minute");
         assert!(result.is_err());
     }
 
@@ -136,5 +175,10 @@ mod tests {
         let result = parse("* * * * 7");
         assert!(result.is_err());
     }
-
+        
+    #[test]
+    fn rejects_out_of_range_value_in_list() {
+        let result = parse_field("1,70,30", 0, 59, "minute");
+        assert!(result.is_err());
+    }
 }
