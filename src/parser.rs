@@ -1,6 +1,11 @@
 use crate::field::Field;
 use crate::{Cron, Error};
 
+const WILDCARD: &str = "*";
+const STEP_DELIMITER: char = '/';
+const LIST_DELIMITER: char = ',';
+const RANGE_DELIMITER: char = '-';
+
 /// Parses a standard 5-field cron expression into a validated structured representation.
 pub fn parse(expression: &str) -> Result<Cron, Error> {
     let parts: Vec<&str> = expression.split_whitespace().collect();
@@ -23,24 +28,24 @@ pub fn parse(expression: &str) -> Result<Cron, Error> {
 
 /// Parses a single cron field according to the supported syntax for this implementation.
 fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, Error> {
-    if input == "*" {
+    if input == WILDCARD {
         return Ok(Field::Any);
     }
 
-    if input.contains('/') {
+    if input.contains(STEP_DELIMITER) {
         return parse_step(input, min, max, field_name);
     }
 
-    if input.contains(',') {
+    if input.contains(LIST_DELIMITER) {
         let values = input
-            .split(',')
+            .split(LIST_DELIMITER)
             .map(|part| parse_literal(part, min, max, field_name))
             .collect::<Result<Vec<u32>, Error>>()?;
 
         return Ok(Field::List(values));
     }
 
-    if input.contains('-') {
+    if input.contains(RANGE_DELIMITER) {
         return parse_range(input, min, max, field_name);
     }
 
@@ -50,7 +55,7 @@ fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Fiel
 
 /// Parses a step expression such as `*/15` or `1-30/5`.
 fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, Error> {
-    let parts: Vec<&str> = input.split('/').collect();
+    let parts: Vec<&str> = input.split(STEP_DELIMITER).collect();
 
     if parts.len() != 2 {
         return Err(Error::InvalidExpression(format!(
@@ -86,11 +91,11 @@ fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field
 /// - `*`
 /// - a range such as `1-30`
 fn parse_step_base(base: &str, min: u32, max: u32, field_name: &str) -> Result<Field, Error> {
-    if base == "*" {
+    if base == WILDCARD {
         return Ok(Field::Any);
     }
 
-    if base.contains('-') {
+    if base.contains(RANGE_DELIMITER) {
         return parse_range(base, min, max, field_name);
     }
 
@@ -99,13 +104,12 @@ fn parse_step_base(base: &str, min: u32, max: u32, field_name: &str) -> Result<F
     )))
 }
 
-
 /// Parses a range expression such as `1-5`.
 ///
 /// Ranges are inclusive and may use the same start and end value,
-/// so expressions such as `5-5` are treated as valid ranges
+/// so expressions such as `5-5` are treated as valid ranges.
 fn parse_range(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, Error> {
-    let parts: Vec<&str> = input.split('-').collect();
+    let parts: Vec<&str> = input.split(RANGE_DELIMITER).collect();
 
     if parts.len() != 2 {
         return Err(Error::InvalidExpression(format!(
@@ -173,7 +177,6 @@ mod tests {
         let result = parse_field("5-5", 0, 59, "minute");
         assert_eq!(result.unwrap(), Field::Range { start: 5, end: 5 });
     }
-
 
     #[test]
     fn parses_wildcard_step_field() {
