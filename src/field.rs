@@ -29,13 +29,13 @@ impl Field {
     pub(crate) fn matches(&self, value: u32, field_min: u32) -> bool {
         match self {
             Field::Any => true,
-            Field::Exact(exact) => *exact == value,
+            Field::Exact(exact) => exact == &value,
             Field::Range { start, end } => start <= &value && &value <= end,
             Field::List(values) => values.contains(&value),
             Field::Step { base, step } => match base.as_ref() {
                 Field::Any => value >= field_min && (value - field_min).is_multiple_of(*step),
                 Field::Range { start, end } => {
-                    value >= *start && value <= *end && (value - *start).is_multiple_of(*step)
+                    &value >= start && &value <= end && (value - start).is_multiple_of(*step)
                 }
 
                 // Unsupported by the current parser: step bases are limited to "*" or a range.
