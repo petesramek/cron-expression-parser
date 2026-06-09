@@ -7,14 +7,19 @@ pub fn next_occurrence(parsed: &Cron, reference_timestamp: i64) -> Result<i64, E
     let mut current = DateTime::<Utc>::from_timestamp(reference_timestamp, 0)
         .ok_or(Error::InvalidTimestamp(reference_timestamp))?;
 
+    // We need to normalize time to not account for ns and s
+    // There is a need to move smallest applicable time part by one to reflect requirements to find fist next occurence
     current += Duration::minutes(1);
     current = current
         .with_second(0)
         .and_then(|dt| dt.with_nanosecond(0))
         .ok_or(Error::InvalidTimestamp(reference_timestamp))?;
 
+    // Safeguarding for potential infinite loop e.g. every 31st of February
     const MAX_ITERATIONS: i32 = 2635200; // ~5 years in minutes
 
+    // Walking through each minute until we find the correct next occurrence
+    // Performance-wise not the best solution
     for _ in 0..MAX_ITERATIONS {
         let minute = current.minute();
         let hour = current.hour();
@@ -26,6 +31,7 @@ pub fn next_occurrence(parsed: &Cron, reference_timestamp: i64) -> Result<i64, E
             return Ok(current.timestamp());
         }
 
+        // Each iteration we need to update time by smallest part to avoid infinite loop
         current += Duration::minutes(1);
     }
 

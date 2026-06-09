@@ -10,6 +10,7 @@ const RANGE_DELIMITER: char = '-';
 pub fn parse(expression: &str) -> Result<Cron, Error> {
     let parts: Vec<&str> = expression.split_whitespace().collect();
 
+    // We expect to work only with 5 value cron pattern
     if parts.len() != 5 {
         return Err(Error::InvalidExpression(format!(
             "Expected 5 fields, got {}",
@@ -57,6 +58,7 @@ fn parse_field(input: &str, min: u32, max: u32, field_name: &str) -> Result<Fiel
 fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field, Error> {
     let parts: Vec<&str> = input.split(STEP_DELIMITER).collect();
 
+    // We expect to have 2 parts after splitting
     if parts.len() != 2 {
         return Err(Error::InvalidExpression(format!(
             "Invalid {field_name} step: {input}"
@@ -66,10 +68,12 @@ fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field
     let base_part = parts[0];
     let step_part = parts[1];
 
+    // Steps need to be parsed as number
     let step = step_part.parse::<u32>().map_err(|_| {
         Error::InvalidExpression(format!("Invalid {field_name} step value: {step_part}"))
     })?;
 
+    // Validating step is at least 1 and the most is maximum allowed value for the field
     if step < 1 || step > max {
         return Err(Error::InvalidExpression(format!(
             "{field_name} step must be between 1 and {max}: {input}"
