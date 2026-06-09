@@ -65,9 +65,9 @@ fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field
         Error::InvalidExpression(format!("Invalid {field_name} step value: {step_part}"))
     })?;
 
-    if step == 0 {
+    if step < 1 || step > max {
         return Err(Error::InvalidExpression(format!(
-            "{field_name} step must be greater than 0: {input}"
+            "{field_name} step must be between 1 and {max}: {input}"
         )));
     }
 
@@ -352,6 +352,12 @@ mod tests {
     #[test]
     fn rejects_invalid_step_base() {
         let result = parse_field("5/10", 0, 59, "minute");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_out_of_range_step_value() {
+        let result = parse_field("*/60", 0, 59, "minute");
         assert!(result.is_err());
     }
 
