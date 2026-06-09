@@ -74,6 +74,7 @@ fn parse_step(input: &str, min: u32, max: u32, field_name: &str) -> Result<Field
     })?;
 
     // Validating step is at least 1 and the most is maximum allowed value for the field
+    // This might even be changed to if step < 1 || step >= (max - min) to ensure range combined with steps runs twice.
     if step < 1 || step > max {
         return Err(Error::InvalidExpression(format!(
             "{field_name} step must be between 1 and {max}: {input}"
