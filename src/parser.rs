@@ -302,48 +302,6 @@ mod tests {
     }
 
     #[test]
-    fn rejects_invalid_cron_values() {
-        let result = parse("* * * * a");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn rejects_invalid_cron_length() {
-        let result = parse("* * * *");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn rejects_invalid_minute() {
-        let result = parse("70 * * * *");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn rejects_invalid_hour() {
-        let result = parse("* 24 * * *");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn rejects_invalid_day() {
-        let result = parse("* * 32 * *");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn rejects_invalid_month() {
-        let result = parse("* * * 13 *");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn rejects_invalid_day_of_week() {
-        let result = parse("* * * * 7");
-        assert!(result.is_err());
-    }
-
-    #[test]
     fn rejects_out_of_range_value_in_list() {
         let result = parse_field("1,70,30", 0, 59, "minute");
         assert!(result.is_err());
@@ -406,6 +364,66 @@ mod tests {
     #[test]
     fn rejects_malformed_step() {
         let result = parse_field("*/15/2", 0, 59, "minute");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_cron_values() {
+        let result = parse("* * * * a");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_cron_length() {
+        let result = parse("* * * *");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_minute() {
+        let result = parse("70 * * * *");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_hour() {
+        let result = parse("* 24 * * *");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_day() {
+        let result = parse("* * 32 * *");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_month() {
+        let result = parse("* * * 13 *");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_day_of_week() {
+        let result = parse("* * * * 7");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_empty_range() {
+        let result = parse("* * * * -");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_empty_list() {
+        let result = parse("* * * * ,");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_empty_step() {
+        let result = parse("* * * * /");
         assert!(result.is_err());
     }
 }
